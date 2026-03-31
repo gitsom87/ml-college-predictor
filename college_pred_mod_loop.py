@@ -17,12 +17,18 @@ from sklearn.linear_model import LogisticRegression
 # 1. CONNECT TO DATABASE
 # ==============================
 try:
+    # conn = pyodbc.connect(
+    #     "DRIVER={ODBC Driver 17 for SQL Server};"
+    #     "SERVER=10.173.17.46,1400;"
+    #     "DATABASE=WBMCC2024_Main;"
+    #     "Trusted_Connection=yes;"
+    # )
     conn = pyodbc.connect(
-        "DRIVER={ODBC Driver 17 for SQL Server};"
-        "SERVER=10.173.17.46,1400;"
-        "DATABASE=WBMCC2024_Main;"
-        "Trusted_Connection=yes;"
-    )
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    r"SERVER=LAPTOP-9UCJFBPD\MSSQLSERVER2022;"
+    "DATABASE=UR_R2;"
+    "Trusted_Connection=yes;"
+)
 except Exception as e:
     print(f"Connection failed: {e}")
     exit()
@@ -31,8 +37,9 @@ except Exception as e:
 # 2. LOAD DATA
 # ==============================
 query = """
-SELECT Rank, Category, Quota, PH, College
-FROM ML_CollegeData
+SELECT Rank, Category, Quota, PH,
+(select id from MD_Institute where description=c.College)College
+FROM ML_CollegeData c
 """
 df = pd.read_sql(query, conn)
 conn.close()
@@ -97,7 +104,7 @@ models = {
     ),
     
     "LogisticRegression": LogisticRegression(
-        max_iter=1000,
+        max_iter=3000,
         class_weight='balanced'
     )
 }
