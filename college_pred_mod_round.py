@@ -46,13 +46,21 @@ conn.close()
 print("Initial shape:", df.shape)
 
 # ==============================
-# 3. CLEAN DATA
+# 3. CLEAN DATA (FIXED)
 # ==============================
-df['PH'] = df['PH'].map({'Y': 1, 'N': 0})
-df.dropna(inplace=True)
+print("\nBefore cleaning:", df.shape)
+
+# PH already 0/1 → ensure numeric
+df['PH'] = pd.to_numeric(df['PH'], errors='coerce').fillna(0)
+
+# Drop only important nulls
+df.dropna(subset=['Rank', 'College'], inplace=True)
+
+print("After cleaning:", df.shape)
+print("Unique colleges:", df['College'].nunique())
 
 # ==============================
-# 4. RANK BIN (VERY IMPORTANT)
+# 4. RANK BIN
 # ==============================
 df['Rank_Bin'] = pd.cut(
     df['Rank'],
@@ -68,46 +76,30 @@ college_counts = df['College'].value_counts()
 rare = college_counts[college_counts < min_samples].index
 df['College'] = df['College'].replace(rare, 'Other')
 
-print("Unique colleges:", df['College'].nunique())
+print("Colleges after grouping:", df['College'].nunique())
 
 # ==============================
 # 6. FEATURES & TARGET
 # ==============================
-X = df[[
-    'Rank',
-    'Rank_Bin',
-    'Year',
-    'RoundNo',
-    'Quota',
-    'Course',
-    'Category',
-    'PH'
-]]
-
+X = df[['Rank', 'Rank_Bin', 'Year', 'RoundNo', 'Quota', 'Course', 'Category', 'PH']]
 y = df['College']
 
 # ==============================
 # 7. TRAIN TEST SPLIT
 # ==============================
+stratify_option = y if y.value_counts().min() > 1 else None
+
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
     test_size=0.2,
     random_state=42,
-    stratify=y
+    stratify=stratify_option
 )
 
 # ==============================
 # 8. PREPROCESSOR
 # ==============================
-categorical_cols = [
-    'Rank_Bin',
-    'Year',
-    'RoundNo',
-    'Quota',
-    'Course',
-    'Category'
-]
-
+categorical_cols = ['Rank_Bin', 'Year', 'RoundNo', 'Quota', 'Course', 'Category']
 numeric_cols = ['Rank', 'PH']
 
 preprocessor = ColumnTransformer([
@@ -208,7 +200,7 @@ for name, res in results.items():
     print(f"{name}: {res['accuracy']:.4f}")
 
 # ==============================
-# 12. TOP-3 ACCURACY (BEST METRIC)
+# 12. TOP-3 ACCURACY
 # ==============================
 def top_n_accuracy(model, X, y, n=3):
     probs = model.predict_proba(X)
